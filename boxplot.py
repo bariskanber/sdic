@@ -23,9 +23,9 @@ for run in range(0,100):
     for file in files:
         if os.path.exists(file):
             df=pd.read_csv(file,header=None, names=['method','loss','AUC','accuracy'])
+            #df=df[df.method!='asis']
             df.method='$'+df.method.astype(str)+'$'
 
-            #df=df[df.method!='rf']
             print(len(df),len(df)/len(np.unique(df.method)))
 
             #df=df.loc[run*len(np.unique(df.method)):len(np.unique(df.method))*(run+1)-1]
@@ -56,7 +56,7 @@ for run in range(0,100):
             sns.swarmplot(y='loss',x='method',data=df,color=".25")
             plt.title(str(len(df))+ " row(s)")
 
-            plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.30, hspace=0.55)
+            plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.35, hspace=0.55)
         # plt.ylim([0.5,3.5])
 
     if MY_PC: plt.show()

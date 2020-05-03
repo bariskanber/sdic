@@ -21,8 +21,7 @@ from sdic import civic
 import pandas as pd
 import os
 
-if os.path.exists('results.csv'):
-    os.remove('results.csv')
+if os.path.exists('results.csv'): os.remove('results.csv')
 
 import socket
 MY_PC=1 if socket.gethostname()=="bkanber-gpu" else 0
@@ -41,7 +40,7 @@ CLASSIFIER_RF="rf"
 CLASSIFIER_LGM="lgm"
 
 modes=[MODE_ORIGINAL,MODE_RANDOM,MODE_LINEAR,MODE_CIRCULAR,MODE_DEEPINSIGHT,CLASSIFIER_RF]
-#modes=[MODE_CIRCULAR,CLASSIFIER_RF]
+#modes=[CLASSIFIER_RF]
 
 for run in range(0,50):
     for mode in modes:
@@ -54,7 +53,7 @@ for run in range(0,50):
         epochs = 9999
         show_plots=1
 
-        if 0:
+        if 1:
             img_rows, img_cols = 28,28
             img_size = 28
             batch_size = 256
@@ -305,63 +304,6 @@ for run in range(0,50):
                 f.write('%s,%f,%f,%f\n'%(mode,np.mean(losses),auc,np.mean(accs)))
             #p=model.predict(x_test)
             #print('Test accuracy(sklearn):', accuracy_score(np.argmax(y_test,axis=1),np.argmax(p,axis=1)))
-        elif classifier==CLASSIFIER_LGM:
-            max_depth=run+7
-            print('max_depth',max_depth)
-            lgbm_params =  {
-                    'task': 'train',
-                    'boosting_type': 'gbdt',
-                    'objective': 'multiclass',
-                    'metric': 'multi_logloss',
-                    #'boost_from_average':False,
-                    #'min_gain_to_split':1e-4, #default: 0
-                    #'min_data_in_leaf':50, #default: 20
-                    #'min_data_in_leaf':5, #default: 20
-                    #'min_sum_hessian_in_leaf':1e-4, #default: 1e-3
-                    #'min_gain_to_split':0, #default: 0
-                    #'max_bin':255, #default: 255
-                    #'min_data_in_bin':3, #default = 3
-                    #'bin_construct_sample_cnt':200000*10, #default = 200000
-                    #'scale_pos_weight':18871296.0/3072, #default = 1.0
-                    'max_depth': max_depth,
-                    #'max_depth': 14,
-                    'num_leaves': 2^(max_depth),
-                    #'feature_fraction': 0.80,
-                    #'feature_fraction_seed':np.random.randint(0,1000000),
-                    #'bagging_fraction': 0.90,
-                    # 'bagging_freq': 5,
-                    #'learning_rate': 0.001*(run+1),
-                    #'lambda_l2': 5,
-                    'num_threads':12 if True else 24,
-                    'num_class':num_classes,
-                }  
-
-            x_train=x_train.reshape(x_train.shape[0],img_size*img_size)
-            x_test=x_test.reshape(x_test.shape[0],img_size*img_size)
-
-            lgtrain = lgb.Dataset(x_train, y_train)
-            lgvalid = lgb.Dataset(x_test, y_test)
-            
-            try:
-                lgb_clf = lgb.train(
-                        lgbm_params,
-                        lgtrain,
-                        num_boost_round=10000,
-                        valid_sets=[lgtrain, lgvalid],
-                        valid_names=['train','valid'],
-                        early_stopping_rounds=50,
-                        verbose_eval=10
-                    )
-                best_iteration=lgb_clf.best_iteration
-                p=lgb_clf.predict(x_test, num_iteration=best_iteration)
-
-                print('Mode:', mode)
-                print('Test loss:', log_loss(y_test,p))
-                print('Test accuracy:', accuracy_score(y_test,np.argmax(p,axis=1)))
-                with open('results.csv','at') as f:
-                    f.write('lgm,%f,%f\n'%(accuracy_score(y_test,np.argmax(p,axis=1)),max_depth))
-            except:
-                pass
         elif classifier==CLASSIFIER_RF:
             Q=x_test.shape[0]//2
             x_val=x_test[:Q]
@@ -374,16 +316,16 @@ for run in range(0,50):
 
             from sklearn.ensemble import RandomForestClassifier
             if num_classes==2:
-                clf=RandomForestClassifier(n_estimators=2000,verbose=1,criterion='entropy')
+                clf=RandomForestClassifier(n_estimators=2000,verbose=1,criterion='entropy',n_jobs=10)
             else:
-                clf=RandomForestClassifier(n_estimators=2000,verbose=1,criterion='entropy')
+                clf=RandomForestClassifier(n_estimators=2000,verbose=1,criterion='entropy',n_jobs=10)
             print(clf)
             clf.fit(x_train,y_train)
             p=clf.predict_proba(x_test)
             if num_classes==2:
                 loss=log_loss(y_test,p)
             else:
-                loss=log_loss(y_test,p,labels=range(0,num_classes-1))
+                loss=log_loss(y_test,p)
             acc=accuracy_score(y_test,np.argmax(p,axis=1))
             if num_classes==2:
                 auc=roc_auc_score(y_test,p[:,1])
