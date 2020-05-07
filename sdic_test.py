@@ -14,13 +14,16 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, Callback
 from keras import backend as K
 import numpy as np
-import lightgbm as lgb 
 from sklearn.metrics import log_loss
 from sklearn.metrics import accuracy_score, roc_auc_score
-import sdic
-import pandas as pd
 import os
-import matplotlib.pyplot as plt
+import sdic
+
+try:
+    import matplotlib.pyplot as plt
+    showplots=True
+except:
+    showplots=False
 
 if os.path.exists('results.csv'): os.remove('results.csv')
 
@@ -36,10 +39,10 @@ CLASSIFIER_RF="rf"
 DATASET_MNIST="mnist"
 DATASET_MUSHROOM="mushroom"
 
-dataset=DATASET_MUSHROOM
+dataset=DATASET_MNIST
 
 for run in range(0,50):
-    for mode in [MODE_SDIC,MODE_SDIC_C,MODE_RAND,MODE_DI,MODE_ASIS,CLASSIFIER_RF]:
+    for mode in [MODE_SDIC,MODE_ASIS,MODE_SDIC_C,MODE_RAND,MODE_DI,CLASSIFIER_RF]:
         print("Operating mode: "+mode)
         if mode==CLASSIFIER_RF:
             mode=MODE_ASIS
@@ -111,7 +114,17 @@ for run in range(0,50):
             y_train=y_train[ind[:-n_test]]
 
         if mode!=MODE_ASIS:
-            if mode==MODE_DI:
+            if mode==MODE_SDIC:
+                vic=sdic.sdic(sdic.SDIC_TYPE_SDIC)
+                vic.fit(x_train)
+                x_train_new=vic.transform(x_train)
+                x_test_new=vic.transform(x_test)
+            elif mode==MODE_SDIC_C:
+                vic=sdic.sdic(sdic.SDIC_TYPE_SDIC_C)
+                vic.fit(x_train)
+                x_train_new=vic.transform(x_train)
+                x_test_new=vic.transform(x_test)
+            elif mode==MODE_DI:
                 x_train_new=np.zeros((x_train.shape[0],img_size,img_size))
                 x_test_new=np.zeros((x_test.shape[0],img_size,img_size))
 
@@ -173,21 +186,11 @@ for run in range(0,50):
                         dir*=-1
                 x_train_new=x_train_new_rand
                 x_test_new=x_test_new_rand
-            elif mode==MODE_SDIC:
-                vic=sdic.sdic(sdic.SDIC_TYPE_SDIC)
-                vic.fit(x_train)
-                x_train_new=vic.transform(x_train)
-                x_test_new=vic.transform(x_test)
-            elif mode==MODE_SDIC_C:
-                vic=sdic.sdic(sdic.SDIC_TYPE_SDIC_C)
-                vic.fit(x_train)
-                x_train_new=vic.transform(x_train)
-                x_test_new=vic.transform(x_test)
             else:
                 raise Exception("Unknown operating mode")
 
-            if True:
-                for j in range(0,1):
+            if showplots and run==0:
+                for j in range(0,5):
                     i=np.random.randint(0,x_train.shape[0])
                     print(np.sum(x_train[i]),np.sum(x_train_new[i]))
                     plt.subplot(121),plt.imshow(x_train[i],cmap='gray')
@@ -204,7 +207,6 @@ for run in range(0,50):
             x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
             input_shape = (img_rows, img_cols,x_train.shape[3])
 
-        print('x_train shape:', x_train.shape)
         print(x_train.shape[0], 'train samples')
         print(x_test.shape[0], 'test samples')
 
