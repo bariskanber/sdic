@@ -213,11 +213,10 @@ for run in range(0,50):
         if classifier==CLASSIFIER_NN:
             x_train = x_train.astype('float32')
             x_test = x_test.astype('float32')
-            if np.max(x_train)>1:
+            if dataset==DATASET_MNIST:
                 x_train /= 255
                 x_test /= 255
 
-            # convert class vectors to binary class matrices
             y_train = keras.utils.to_categorical(y_train, num_classes)
             y_test = keras.utils.to_categorical(y_test, num_classes)
 
@@ -237,7 +236,7 @@ for run in range(0,50):
             losses=[]
 
             for nnrun in range(0,1):
-                if num_classes==2:
+                if dataset==DATASET_MUSHROOM:
                     model = Sequential()
                     ks=(6,6)
                     k=(8+1)*4

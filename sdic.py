@@ -23,6 +23,9 @@ class sdic:
         np.fill_diagonal(self.corrmatrix,np.nan)
 
     def transform(self,datain):
+        """
+        datain: a numpy array of shape n_samples x n_features
+        """
         if self.sdic_type==SDIC_TYPE_SDIC_C:
             return self.transform_SDIC_C(datain)
 
