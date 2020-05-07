@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""SDIC - Sparse matrix to structured imageset conversion 
+"""Sparse data to structured imageset conversion - test script
 """
 
 __author__ = "Baris Kanber"
@@ -17,55 +17,46 @@ import numpy as np
 import lightgbm as lgb 
 from sklearn.metrics import log_loss
 from sklearn.metrics import accuracy_score, roc_auc_score
-from sdic import civic
+import sdic
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
 
 if os.path.exists('results.csv'): os.remove('results.csv')
 
-import socket
-MY_PC=1 if socket.gethostname()=="bkanber-gpu" else 0
-
-if MY_PC:
-    import matplotlib.pyplot as plt
-
-MODE_ORIGINAL="asis"
-MODE_RANDOM="rand"
-MODE_LINEAR="sdic"
-MODE_CIRCULAR="sdic_c"
-MODE_DEEPINSIGHT="di"
+MODE_ASIS="asis"
+MODE_RAND="rand"
+MODE_SDIC="sdic"
+MODE_SDIC_C="sdic_c"
+MODE_DI="di"
 
 CLASSIFIER_NN="cnn"
 CLASSIFIER_RF="rf"
-CLASSIFIER_LGM="lgm"
 
-modes=[MODE_ORIGINAL,MODE_RANDOM,MODE_LINEAR,MODE_CIRCULAR,MODE_DEEPINSIGHT,CLASSIFIER_RF]
-#modes=[CLASSIFIER_RF]
+DATASET_MNIST="mnist"
+DATASET_MUSHROOM="mushroom"
+
+dataset=DATASET_MUSHROOM
 
 for run in range(0,50):
-    for mode in modes:
+    for mode in [MODE_SDIC,MODE_SDIC_C,MODE_RAND,MODE_DI,MODE_ASIS,CLASSIFIER_RF]:
         print("Operating mode: "+mode)
         if mode==CLASSIFIER_RF:
-            mode=MODE_ORIGINAL
+            mode=MODE_ASIS
             classifier=CLASSIFIER_RF
         else:
             classifier=CLASSIFIER_NN
-        epochs = 9999
-        show_plots=1
 
-        if 1:
+        if dataset==DATASET_MNIST:
             img_rows, img_cols = 28,28
             img_size = 28
             batch_size = 256
             num_classes = 10
             (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-            if 1:
+            if True:
                 x_train=np.concatenate((x_train,x_test),axis=0)
                 y_train=np.concatenate((y_train,y_test),axis=0)
-
-                #x_train=x_train[y_train==0]
-                #y_train=y_train[y_train==0]
 
                 ind=list(range(0,x_train.shape[0]))
                 np.random.seed(run)
@@ -119,35 +110,11 @@ for run in range(0,50):
             x_train=x_train[ind[:-n_test]]
             y_train=y_train[ind[:-n_test]]
 
-        if mode!=MODE_ORIGINAL:
-            x_train_new=np.zeros((x_train.shape[0],img_size,img_size))
-            x_test_new=np.zeros((x_test.shape[0],img_size,img_size))
+        if mode!=MODE_ASIS:
+            if mode==MODE_DI:
+                x_train_new=np.zeros((x_train.shape[0],img_size,img_size))
+                x_test_new=np.zeros((x_test.shape[0],img_size,img_size))
 
-            if 1:
-                x_train_new_rand=np.zeros((x_train.shape[0],img_size,img_size))
-                x_test_new_rand=np.zeros((x_test.shape[0],img_size,img_size))
-                ind=list(range(0,img_size*img_size))
-                np.random.seed(run) #xxx
-                np.random.shuffle(ind)
-                cx=cy=0
-                dir=1
-                for i in range(0,img_size*img_size):
-                    dy=ind[i]//img_size
-                    dx=ind[i]%img_size
-                    x_train_new_rand[:,cy,cx]=x_train[:,dy,dx] 
-                    x_test_new_rand[:,cy,cx]=x_test[:,dy,dx] 
-                    if dir==1: cx+=1
-                    else: cx-=1
-                    if cx==img_size:
-                        cy+=1
-                        cx-=1
-                        dir*=-1
-                    elif cx==-1:
-                        cy+=1
-                        cx+=1
-                        dir*=-1
-
-            if mode==MODE_DEEPINSIGHT:
                 from sklearn.decomposition import KernelPCA
                 pca=KernelPCA(n_components=2)
                 X=x_train.reshape(x_train.shape[0],img_size*img_size)
@@ -181,36 +148,58 @@ for run in range(0,50):
                         pts_per_coord[coord]+=1
                 for coord in pts_per_coord:
                     x_test_new[:,coord[0],coord[1]]/=pts_per_coord[coord]
-            elif mode==MODE_RANDOM:
+            elif mode==MODE_RAND:
+                x_train_new_rand=np.zeros((x_train.shape[0],img_size,img_size))
+                x_test_new_rand=np.zeros((x_test.shape[0],img_size,img_size))
+                ind=list(range(0,img_size*img_size))
+                np.random.seed(run)
+                np.random.shuffle(ind)
+                cx=cy=0
+                dir=1
+                for i in range(0,img_size*img_size):
+                    dy=ind[i]//img_size
+                    dx=ind[i]%img_size
+                    x_train_new_rand[:,cy,cx]=x_train[:,dy,dx] 
+                    x_test_new_rand[:,cy,cx]=x_test[:,dy,dx] 
+                    if dir==1: cx+=1
+                    else: cx-=1
+                    if cx==img_size:
+                        cy+=1
+                        cx-=1
+                        dir*=-1
+                    elif cx==-1:
+                        cy+=1
+                        cx+=1
+                        dir*=-1
                 x_train_new=x_train_new_rand
                 x_test_new=x_test_new_rand
-            elif mode==MODE_LINEAR:
-                vic=civic("civic_linear")
-                vic.fit(x_train,None)
+            elif mode==MODE_SDIC:
+                vic=sdic.sdic(sdic.SDIC_TYPE_SDIC)
+                vic.fit(x_train)
                 x_train_new=vic.transform(x_train)
                 x_test_new=vic.transform(x_test)
-            elif mode==MODE_CIRCULAR:
-                vic=civic("civic")
-                vic.fit(x_train,None)
+            elif mode==MODE_SDIC_C:
+                vic=sdic.sdic(sdic.SDIC_TYPE_SDIC_C)
+                vic.fit(x_train)
                 x_train_new=vic.transform(x_train)
                 x_test_new=vic.transform(x_test)
             else:
                 raise Exception("Unknown operating mode")
 
-            if (mode==MODE_LINEAR or 1) and run==0 and MY_PC:
-                for j in range(0,5):
+            if True:
+                for j in range(0,1):
                     i=np.random.randint(0,x_train.shape[0])
-                    print(np.sum(x_train[i]),np.sum(x_train_new_rand[i]),np.sum(x_train_new[i]))
-                    plt.subplot(221),plt.imshow(x_train[i],cmap='gray')
-                    plt.subplot(223),plt.imshow(x_train_new_rand[i],cmap='gray')
-                    plt.subplot(224),plt.imshow(x_train_new[i],cmap='gray')
+                    print(np.sum(x_train[i]),np.sum(x_train_new[i]))
+                    plt.subplot(121),plt.imshow(x_train[i],cmap='gray')
+                    plt.title("asis")
+                    plt.subplot(122),plt.imshow(x_train_new[i],cmap='gray')
                     plt.title(mode)
                     plt.show()
 
             x_train=x_train_new
             x_test=x_test_new
 
-        if 1:
+        if True:
             x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
             x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
             input_shape = (img_rows, img_cols,x_train.shape[3])
@@ -282,7 +271,7 @@ for run in range(0,50):
 
                 model.fit(x_train, y_train,
                         batch_size=batch_size,
-                        epochs=epochs,
+                        epochs=1000,
                         verbose=1,
                         callbacks=callbacks,
                         validation_data=(x_val, y_val))
@@ -302,8 +291,6 @@ for run in range(0,50):
                 
             with open('results.csv','at') as f:
                 f.write('%s,%f,%f,%f\n'%(mode,np.mean(losses),auc,np.mean(accs)))
-            #p=model.predict(x_test)
-            #print('Test accuracy(sklearn):', accuracy_score(np.argmax(y_test,axis=1),np.argmax(p,axis=1)))
         elif classifier==CLASSIFIER_RF:
             Q=x_test.shape[0]//2
             x_val=x_test[:Q]
