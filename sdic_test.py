@@ -42,7 +42,7 @@ DATASET_MUSHROOM="mushroom"
 dataset=DATASET_MNIST
 
 for run in range(0,50):
-    for mode in [MODE_SDIC,MODE_ASIS,MODE_SDIC_C,MODE_RAND,MODE_DI,CLASSIFIER_RF]:
+    for mode in [MODE_SDIC,MODE_SDIC_C,MODE_ASIS,MODE_RAND,MODE_DI,CLASSIFIER_RF]:
         print("Operating mode: "+mode)
         if mode==CLASSIFIER_RF:
             mode=MODE_ASIS

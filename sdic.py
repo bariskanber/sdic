@@ -12,7 +12,11 @@ SDIC_TYPE_SDIC_C = "sdic_c"
 
 class sdic:
     def __init__(self,sdic_type):
+        """
+        sdic_type: the type of sparse dataset to structured imageset conversion to apply (SDIC_TYPE_*)
+        """
         self.sdic_type=sdic_type
+        assert(self.sdic_type in (SDIC_TYPE_SDIC,SDIC_TYPE_SDIC_C))
 
     def fit(self,datain):
         """
@@ -39,8 +43,7 @@ class sdic:
         datain=datain.reshape((datain.shape[0],-1))
         corrmatrix=np.array(self.corrmatrix,dtype=self.corrmatrix.dtype)
 
-        n_features=datain.shape[1]
-        img_size=int(np.ceil(np.sqrt(n_features)))
+        img_size=int(np.ceil(np.sqrt(datain.shape[1])))
         if img_size%2!=0: img_size+=1
 
         dataout=np.zeros((datain.shape[0],img_size,img_size))
@@ -85,8 +88,7 @@ class sdic:
         datain=datain.reshape((datain.shape[0],-1))
         corrmatrix=np.array(self.corrmatrix,dtype=self.corrmatrix.dtype)
 
-        n_features=datain.shape[1]
-        img_size=int(np.ceil(np.sqrt(n_features)))
+        img_size=int(np.ceil(np.sqrt(datain.shape[1])))
         if img_size%2!=0: img_size+=1
 
         dataout=np.zeros((datain.shape[0],img_size,img_size))
@@ -115,7 +117,6 @@ class sdic:
                 cx-=1
                 if lem>1: cx-=1
                 lem+=2
-                if lem>999: break
                 lemi=0
                 dir=1
             else:
@@ -147,7 +148,6 @@ class sdic:
                         break
                     else:
                         lemi+=1
-                        pass
 
             lemi+=1
             dataout[:,cy,cx]=datain[:,dx]
